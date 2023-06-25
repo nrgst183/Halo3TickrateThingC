@@ -24,6 +24,6 @@ jobs:
     - name: Upload release executable
       uses: actions/upload-release-asset@v1
       with:
-        asset-path: Halo3TickrateThingCPP\bin\Release\YourExecutable.exe  # Replace with the path to your release executable
+        asset-path: Halo3TickrateThingCPP\bin\Release\Halo3TickrateThingCPP.exe  # Replace with the path to your release executable
         asset-name: YourExecutable.exe  # Replace with the desired name of the asset
         repo-token: ${{ secrets.GITHUB_TOKEN }}
