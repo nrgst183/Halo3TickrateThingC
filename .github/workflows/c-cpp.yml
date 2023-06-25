@@ -13,21 +13,13 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v2
     
-    - name: Install Visual Studio Build Tools
-      run: |
-        choco install visualstudio2019buildtools --package-parameters "--add Microsoft.VisualStudio.Workload.VCTools --includeRecommended"
-    
-    - name: Set up MSVC
-      shell: cmd
-      run: |
-        call "C:\Program Files (x86)\Microsoft Visual Studio\2019\BuildTools\VC\Auxiliary\Build\vcvars64.bat"
-    
     - name: Build project
-      run: msbuild Halo3TickrateThingCPP.sln /p:Configuration=Release /p:Platform=x64
+      run: |
+        docker run --rm -v $PWD:/workspace -w /workspace mcr.microsoft.com/windows/servercore:ltsc2019 powershell -Command "msbuild Halo3TickrateThingCPP.sln /p:Configuration=Release /p:Platform=x64"
     
     - name: Upload release executable
       uses: actions/upload-release-asset@v1
       with:
-        asset-path: Halo3TickrateThingCPP\bin\Release\Halo3TickrateThingCPP.exe  # Replace with the path to your release executable
+        asset-path: Halo3TickrateThingCPP\bin\Release\YourExecutable.exe  # Replace with the path to your release executable
         asset-name: YourExecutable.exe  # Replace with the desired name of the asset
         repo-token: ${{ secrets.GITHUB_TOKEN }}
