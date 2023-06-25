@@ -15,7 +15,7 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="Halo3TickrateThing.cpp">
+    <ClCompile Include="Halo3TickrateThing.c">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
