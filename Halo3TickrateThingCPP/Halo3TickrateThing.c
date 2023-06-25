@@ -277,7 +277,8 @@ void create_mcc_scanner_window(HINSTANCE hInstance, int nCmdShow)
 	{
 		.lpfnWndProc = mcc_scanner_window_proc,
 		.hInstance = hInstance,
-		.lpszClassName = k_window_class
+		.lpszClassName = k_window_class,
+		.hbrBackground = GetSysColorBrush(COLOR_3DFACE)
 	};
 
 	RegisterClass(&win_class);
