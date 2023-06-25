@@ -1,0 +1,29 @@
+name: Halo3TickrateThingCPP CI
+
+on:
+  push:
+    branches:
+      - master
+
+jobs:
+  build:
+    runs-on: windows-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v2
+    
+    - name: Set up MSVC
+      uses: microsoft/setup-msvc@v1
+      with:
+        msvc-version: 'Latest'  # Use 'Latest' for the latest installed version of MSVC
+    
+    - name: Build project
+      run: msbuild Halo3TickrateThingCPP.sln /p:Configuration=Release /p:Platform=x64
+    
+    - name: Upload release executable
+      uses: actions/upload-release-asset@v1
+      with:
+        asset-path: Halo3TickrateThingCPP\bin\Release\YourExecutable.exe  # Replace with the path to your release executable
+        asset-name: YourExecutable.exe  # Replace with the desired name of the asset
+        repo-token: ${{ secrets.GITHUB_TOKEN }}
