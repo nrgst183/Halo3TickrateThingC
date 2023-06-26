@@ -40,6 +40,6 @@ jobs:
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
           asset_path: D:\a\Halo3TickrateThingC\Halo3TickrateThingC\x64\Release\Halo3TickrateThingC.exe
-          asset_name: Halo3TickrateThingC.exe
+          asset_name: Halo3TickrateThingCPP.exe
           asset_content_type: application/octet-stream
 
