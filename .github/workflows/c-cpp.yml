@@ -8,22 +8,33 @@ on:
 jobs:
   build:
     runs-on: windows-latest
-    
+
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v2
-    
-    - name: Set up MSVC
-      uses: microsoft/setup-msbuild@v1
-      with:
-        vs-version: 'latest'
-    
-    - name: Build project
-      run: msbuild.exe Halo3TickrateThingCPP.sln /p:Configuration=Release /p:Platform=x64
-    
-    - name: Upload release executable
-      uses: actions/upload-release-asset@v1
-      with:
-        asset-path: Halo3TickrateThingCPP\bin\Release\Halo3TickrateThingCPP.exe  # Replace with the path to your release executable
-        asset-name: Halo3TickrateThingCPP.exe  # Replace with the desired name of the asset
-        repo-token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Set up MSVC
+        uses: microsoft/setup-msbuild@v1
+        with:
+          vs-version: 'latest'
+
+      - name: Build project
+        run: msbuild.exe Halo3TickrateThingCPP.sln /p:Configuration=Release /p:Platform=x64
+
+      - name: Create release
+        id: create_release
+        uses: actions/create-release@v1
+        with:
+          tag_name: ${{ github.ref }}
+          release_name: Release ${{ github.ref }}
+          draft: false
+          prerelease: false
+
+      - name: Upload release asset
+        uses: actions/upload-release-asset@v1
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: Halo3TickrateThingCPP/bin/Release/Halo3TickrateThingCPP.exe
+          asset_name: Halo3TickrateThingCPP.exe
+          asset_content_type: application/octet-stream
+          token: ${{ secrets.GITHUB_TOKEN }}
