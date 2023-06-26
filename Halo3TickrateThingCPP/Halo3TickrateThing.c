@@ -56,11 +56,35 @@ uintptr_t resolve_pointer_chain(uintptr_t base_address, unsigned int offsets[], 
 	return current_address;
 }
 
-bool acquired_mcc_process()
+bool acquired_mcc_process_and_halo3_dll()
 {
 	HANDLE mcc_process = InterlockedCompareExchangePointer(&mcc_thread_process, NULL, NULL);
-	return (mcc_process != INVALID_HANDLE_VALUE);
-};
+	if (mcc_process == INVALID_HANDLE_VALUE) {
+		return false;
+	}
+
+	HANDLE snapshot = CreateToolhelp32Snapshot(TH32CS_SNAPMODULE, GetProcessId(mcc_process));
+	if (snapshot == INVALID_HANDLE_VALUE) {
+		return false;
+	}
+
+	MODULEENTRY32 module_entry = { 0 };
+	module_entry.dwSize = sizeof(module_entry);
+
+	bool halo3_dll_found = false;
+
+	if (Module32First(snapshot, &module_entry)) {
+		do {
+			if (!_tcscmp(k_mcc_halo3_module_name, module_entry.szModule)) {
+				halo3_dll_found = true;
+				break;
+			}
+		} while (Module32Next(snapshot, &module_entry));
+	}
+	CloseHandle(snapshot);
+
+	return halo3_dll_found;
+}
 
 uintptr_t find_mcc_halo3_address()
 {
@@ -85,6 +109,37 @@ uintptr_t find_mcc_halo3_address()
 	CloseHandle(snapshot);
 
 	return (uintptr_t)module;
+}
+
+void set_mcc_tickrate(unsigned int tickrate)
+{
+	HANDLE mcc_process = InterlockedCompareExchangePointer(&mcc_thread_process, NULL, NULL);
+	uintptr_t mcc_tickrate_address = InterlockedCompareExchange64(&mcc_thread_tickrate_address, 0, 0);
+	uintptr_t mcc_time_per_tick_address = InterlockedCompareExchange64(&mcc_thread_time_per_tick_address, 0, 0);
+
+	float desired_time_per_tick = 1.f / tickrate;
+
+	if (mcc_process != INVALID_HANDLE_VALUE && mcc_tickrate_address != 0)
+	{
+		// Read current values
+		unsigned int current_tickrate;
+		float current_time_per_tick;
+		ReadProcessMemory(mcc_process, (LPVOID)mcc_tickrate_address, &current_tickrate, sizeof(current_tickrate), NULL);
+		ReadProcessMemory(mcc_process, (LPVOID)mcc_time_per_tick_address, &current_time_per_tick, sizeof(current_time_per_tick), NULL);
+
+		// Check if the values are different and need updating
+		if (current_tickrate != tickrate)
+		{
+			bool success = WriteProcessMemory(mcc_process, (LPVOID)mcc_tickrate_address, &tickrate, sizeof(tickrate), NULL);
+			assert(success == true);
+		}
+
+		if (current_time_per_tick != desired_time_per_tick)
+		{
+			bool success = WriteProcessMemory(mcc_process, (LPVOID)mcc_time_per_tick_address, &desired_time_per_tick, sizeof(desired_time_per_tick), NULL);
+			assert(success == true);
+		}
+	}
 }
 
 bool scan_for_mcc()
@@ -135,14 +190,27 @@ bool scan_for_mcc()
 
 	CloseHandle(hProcessSnap);
 
-	return acquired_mcc_process();
+	return acquired_mcc_process_and_halo3_dll();
+}
+
+void update_tickrate_according_to_checkbox()
+{
+	if (IsDlgButtonChecked(mcc_scanner_window, ID_CHECKBOX1) == BST_CHECKED) {
+		set_mcc_tickrate(30);
+	}
+	else {
+		set_mcc_tickrate(60);
+	}
 }
 
 DWORD WINAPI mcc_scanner_thread_proc(LPVOID lpThreadParameter)
 {
 	while (!InterlockedCompareExchange(&should_close_mcc_scanner_thread, FALSE, FALSE))
 	{
-		scan_for_mcc();
+		if (scan_for_mcc()) {
+			// Update tick rate according to checkbox state
+			update_tickrate_according_to_checkbox();
+		}
 		Sleep(100);
 	}
 
@@ -167,40 +235,9 @@ void wait_for_mcc_scanner_thread()
 	WaitForSingleObject(mcc_scanner_thread, INFINITE);
 }
 
-void set_mcc_tickrate(unsigned int tickrate)
-{
-	HANDLE mcc_process = InterlockedCompareExchangePointer(&mcc_thread_process, NULL, NULL);
-	uintptr_t mcc_tickrate_address = InterlockedCompareExchange64(&mcc_thread_tickrate_address, 0, 0);
-	uintptr_t mcc_time_per_tick_address = InterlockedCompareExchange64(&mcc_thread_time_per_tick_address, 0, 0);
-
-	float desired_time_per_tick = 1.f / tickrate;
-
-	if (mcc_process != INVALID_HANDLE_VALUE && mcc_tickrate_address != 0)
-	{
-		// Read current values
-		unsigned int current_tickrate;
-		float current_time_per_tick;
-		ReadProcessMemory(mcc_process, (LPVOID)mcc_tickrate_address, &current_tickrate, sizeof(current_tickrate), NULL);
-		ReadProcessMemory(mcc_process, (LPVOID)mcc_time_per_tick_address, &current_time_per_tick, sizeof(current_time_per_tick), NULL);
-
-		// Check if the values are different and need updating
-		if (current_tickrate != tickrate)
-		{
-			bool success = WriteProcessMemory(mcc_process, (LPVOID)mcc_tickrate_address, &tickrate, sizeof(tickrate), NULL);
-			assert(success == true);
-		}
-
-		if (current_time_per_tick != desired_time_per_tick)
-		{
-			bool success = WriteProcessMemory(mcc_process, (LPVOID)mcc_time_per_tick_address, &desired_time_per_tick, sizeof(desired_time_per_tick), NULL);
-			assert(success == true);
-		}
-	}
-}
-
 void update_mcc_scanner_window_status()
 {
-	if (acquired_mcc_process())
+	if (acquired_mcc_process_and_halo3_dll())
 	{
 		SetWindowText(mcc_scanner_window_status_label, _T("Status: Connected to Game."));
 		EnableWindow(mcc_scanner_window_checkbox, TRUE);
@@ -312,25 +349,17 @@ void create_mcc_scanner_window(HINSTANCE hInstance, int nCmdShow)
 void pump_mcc_scanner_window_events()
 {
 	MSG msg = { 0 };
-	BOOL success = FALSE;
+	BOOL result;
 
-	while ((success = GetMessage(&msg, mcc_scanner_window, 0, 0)) != 0)
+	while ((result = GetMessage(&msg, NULL, 0, 0)) != 0)
 	{
-		if (success == -1)
+		if (result == -1)
 		{
-			return;
+			// Handle the error and possibly exit
+			break;
 		}
 		else
 		{
-			static bool old_status = false;
-			bool current_status = acquired_mcc_process();
-
-			if (current_status != old_status)
-			{
-				update_mcc_scanner_window_status();
-				old_status = current_status;
-			}
-
 			TranslateMessage(&msg);
 			DispatchMessage(&msg);
 		}
