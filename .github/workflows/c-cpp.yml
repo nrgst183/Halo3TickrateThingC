@@ -13,8 +13,13 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v2
     
+    - name: Set up MSVC
+      uses: microsoft/setup-msbuild@v1
+      with:
+        vs-version: 'latest'
+    
     - name: Build project
-      run: msbuild Halo3TickrateThingCPP.sln /p:Configuration=Release /p:Platform=x64
+      run: msbuild.exe Halo3TickrateThingCPP.sln /p:Configuration=Release /p:Platform=x64
     
     - name: Upload release executable
       uses: actions/upload-release-asset@v1
