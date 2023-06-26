@@ -7,29 +7,19 @@ on:
 
 jobs:
   build:
-    runs-on: windows-latest
-    
-    env:
-      MSVC_INSTALL_PATH: 'C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise'
-      MSBUILD_PATH: '${{ env.MSVC_INSTALL_PATH }}\MSBuild\Current\Bin\MSBuild.exe'
+    runs-on: windows-2019
     
     steps:
     - name: Checkout code
       uses: actions/checkout@v2
     
-    - name: Set up MSVC
-      run: |
-        echo "##[add-path]${{ env.MSVC_INSTALL_PATH }}\MSBuild\Current\Bin"
-        echo "##[set-env name=PATH;]${{ env.MSVC_INSTALL_PATH }}\Common7\IDE\VC\VCPackages"
-    
     - name: Build project
       run: |
-        $env:PATH = "${{ env.MSVC_INSTALL_PATH }}\Common7\IDE\VC\VCPackages;${{ env.PATH }}"
-        & $env:MSBUILD_PATH Halo3TickrateThingCPP.sln /p:Configuration=Release /p:Platform=x64
+        docker run --rm -v "${{ github.workspace }}:/workspace" -w /workspace mcr.microsoft.com/windows/servercore:ltsc2019 powershell -Command "msbuild Halo3TickrateThingCPP.sln /p:Configuration=Release /p:Platform=x64"
     
     - name: Upload release executable
       uses: actions/upload-release-asset@v1
       with:
-        asset-path: Halo3TickrateThingCPP\bin\Release\YourExecutable.exe  # Replace with the path to your release executable
-        asset-name: YourExecutable.exe  # Replace with the desired name of the asset
+        asset-path: Halo3TickrateThingCPP\bin\Release\Halo3TickrateThingCPP.exe  # Replace with the path to your release executable
+        asset-name: Halo3TickrateThingCPP.exe  # Replace with the desired name of the asset
         repo-token: ${{ secrets.GITHUB_TOKEN }}
