@@ -9,18 +9,23 @@ jobs:
   build:
     runs-on: windows-latest
     
+    env:
+      MSVC_INSTALL_PATH: 'C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise'
+      MSBUILD_PATH: '${{ env.MSVC_INSTALL_PATH }}\MSBuild\Current\Bin\MSBuild.exe'
+    
     steps:
     - name: Checkout code
       uses: actions/checkout@v2
     
     - name: Set up MSVC
-      uses: microsoft/setup-msvc@v1
-      with:
-        msvc-version: '2019'  # Use '2019' for MSVC 2019
-        
+      run: |
+        echo "##[add-path]${{ env.MSVC_INSTALL_PATH }}\MSBuild\Current\Bin"
+        echo "##[set-env name=PATH;]${{ env.MSVC_INSTALL_PATH }}\Common7\IDE\VC\VCPackages"
+    
     - name: Build project
       run: |
-        "${env:ProgramFiles(x86)}\Microsoft Visual Studio\2019\Enterprise\MSBuild\Current\Bin\MSBuild.exe" Halo3TickrateThingCPP.sln /p:Configuration=Release /p:Platform=x64
+        $env:PATH = "${{ env.MSVC_INSTALL_PATH }}\Common7\IDE\VC\VCPackages;${{ env.PATH }}"
+        & $env:MSBUILD_PATH Halo3TickrateThingCPP.sln /p:Configuration=Release /p:Platform=x64
     
     - name: Upload release executable
       uses: actions/upload-release-asset@v1
