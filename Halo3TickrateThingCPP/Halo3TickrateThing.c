@@ -198,6 +198,20 @@ void set_mcc_tickrate(unsigned int tickrate)
 	}
 }
 
+void update_mcc_scanner_window_status()
+{
+	if (acquired_mcc_process())
+	{
+		SetWindowText(mcc_scanner_window_status_label, _T("Status: Connected to Game."));
+		EnableWindow(mcc_scanner_window_checkbox, TRUE);
+	}
+	else
+	{
+		SetWindowText(mcc_scanner_window_status_label, _T("Status: Not Connected to Game."));
+		EnableWindow(mcc_scanner_window_checkbox, FALSE);
+	}
+}
+
 LRESULT CALLBACK mcc_scanner_window_proc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 {
 	switch (uMsg)
@@ -250,25 +264,15 @@ LRESULT CALLBACK mcc_scanner_window_proc(HWND hwnd, UINT uMsg, WPARAM wParam, LP
 	}
 	break;
 
+	case WM_TIMER:
+		update_mcc_scanner_window_status();
+		break;
+
 	default:
 		return DefWindowProc(hwnd, uMsg, wParam, lParam);
 	}
 
 	return 0;
-}
-
-void update_mcc_scanner_window_status()
-{
-	if (acquired_mcc_process())
-	{
-		SetWindowText(mcc_scanner_window_status_label, _T("Status: Connected to Game."));
-		EnableWindow(mcc_scanner_window_checkbox, TRUE);
-	}
-	else
-	{
-		SetWindowText(mcc_scanner_window_status_label, _T("Status: Not Connected to Game."));
-		EnableWindow(mcc_scanner_window_checkbox, FALSE);
-	}
 }
 
 void create_mcc_scanner_window(HINSTANCE hInstance, int nCmdShow)
@@ -300,6 +304,9 @@ void create_mcc_scanner_window(HINSTANCE hInstance, int nCmdShow)
 	ShowWindow(mcc_scanner_window, nCmdShow);
 	UpdateWindow(mcc_scanner_window);
 	update_mcc_scanner_window_status();
+
+	// Set a timer to periodically update the status
+	SetTimer(mcc_scanner_window, 1, 500, NULL); // 1 second intervals
 }
 
 void pump_mcc_scanner_window_events()
