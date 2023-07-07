@@ -1,4 +1,4 @@
-# Halo3TickrateThingC
+# Halo 3 Tickrate Thing
 
 Changes the Halo 3 MCC tickrate from 60 to 30 to fix issues/weirdness (but made in C with Win32 API). 
 
